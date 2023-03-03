@@ -4,3 +4,16 @@
 /constructors/__pycache__/
 /pattern_encoders/__pycache__/
 /preprocessors/__pycache__/
+
+
+/meta-output/
+!/meta-output/.gitkeep
+
+/output/
+!/output/.gitkeep
+
+/performance/
+!/performance/.gitkeep
+
+/raw_data/
+!/raw_data/.gitkeep
