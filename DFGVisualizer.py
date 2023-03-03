@@ -73,16 +73,16 @@ class DFGVisualizer:
         self.abbr_dict_lpm = data_set_dictionaries.abbr_dict_lpm_2[self.name_data_set]
         self.exclude_clusters = exclude_clusters
 
-    def visualize_intra_cluster_graph(self, cluster):
+    def visualize_intra_task_DFG(self, cluster):
         dot = Digraph(comment='Query Result')
         dot.attr("graph", rankdir="LR", margin="0", ranksep="2.0", nodesep="1.0")
         with self.driver.session() as session:
-            session.read_transaction(self.get_intra_cluster_DFG, dot, cluster)
+            session.read_transaction(self.get_intra_task_DFG, dot, cluster)
         output_directory = os.path.join(self.analysis_directory, "DFGs", "DFG_inter_cluster")
         os.makedirs(output_directory, exist_ok=True)
         dot.render(f'{output_directory}\\DFG_inter_cluster_{cluster}', view=True)
 
-    def visualize_cluster_DFG(self, entity_type, df_show_threshold, start_end_date=None, resources=None,
+    def visualize_inter_task_DFG(self, entity_type, df_show_threshold, start_end_date=None, resources=None,
                               print_description=False):
         dot = Digraph(comment='Query Result')
         dot.attr("graph", rankdir="LR", margin="0", ranksep="1.5", nodesep="0.5")
@@ -357,7 +357,7 @@ class DFGVisualizer:
         pr.record_performance('draw_nodes')
         return dot
 
-    def get_intra_cluster_DFG(self, tx, dot, cluster):
+    def get_intra_task_DFG(self, tx, dot, cluster):
         # set default graph properties
         font_size_large = 38
         font_size_small = 34
@@ -747,6 +747,7 @@ def query_inter_cluster_DFG_edges_min_max(tx, cluster, grey_threshold):
             WITH DISTINCT e1.activity_lifecycle AS e1_action, e2.activity_lifecycle AS e2_action, count(df) AS freq
             RETURN MAX(freq)
             '''
+    print(q)
     max_edge_freq = tx.run(q).single()[0]
     log_max_edge_freq = np.log(int(max_edge_freq))
     min_edge_freq = grey_threshold

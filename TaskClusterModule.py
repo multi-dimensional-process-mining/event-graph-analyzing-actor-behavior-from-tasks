@@ -8,10 +8,10 @@ from Clusterer import Clusterer
 from GraphConfigurator import GraphConfigurator
 
 
-class TaskAnalyzer:
+class TaskClusterModule:
     def __init__(self, graph, password, analysis_directory, pattern_filter_description, pattern_filter_cypher, encoding,
                  num_clusters):
-        print("Initializing task analyzer...")
+        print("Initializing task cluster module...")
         self.graph = graph
         self.driver = GraphDatabase.driver("bolt://localhost:7687", auth=("neo4j", password))
         self.analysis_directory = analysis_directory
@@ -46,9 +46,11 @@ class TaskAnalyzer:
     def cluster(self, encoding, num_clusters):
         if path.exists(
                 f"{self.meta_directory}patterns_{self.graph}_{self.pattern_filter_description}_{num_clusters}.pkl"):
+            print("\tRetrieve clustering from pickle...")
             self.df_patterns_clustered = pd.read_pickle(
                 f"{self.meta_directory}patterns_{self.graph}_{self.pattern_filter_description}_{num_clusters}.pkl")
         else:
+            print("\tPerform new clustering...")
             e = PatternEncoderFactory.get_pattern_encoder(self.gc.get_name_data_set(), encoding[0], encoding[1],
                                                           encoding[2])
             pattern_subset_to_cluster = self.df_patterns[self.df_patterns['path_length'] > 1]
@@ -58,8 +60,9 @@ class TaskAnalyzer:
             self.df_patterns_clustered = pd.concat([self.df_patterns, df_clusters], axis=1)
             self.cluster_encoding = encoding
             os.makedirs(self.meta_directory, exist_ok=True)
+            print("\tSave clustering to pickle...")
             self.df_patterns_clustered.to_pickle(
-                f"{self.meta_directory}lattice_{self.graph}_{self.pattern_filter_description}_{num_clusters}.pkl")
+                f"{self.meta_directory}patterns_{self.graph}_{self.pattern_filter_description}_{num_clusters}.pkl")
 
 
 def query_pattern_variants_and_frequencies(tx, filter):

@@ -20,7 +20,7 @@ class PerformanceRecorder:
                                                                 'start': self.last, 'end': current_time,
                                                                 'duration': (current_time - self.last)},
                                                                ignore_index=True)
-        print(action + ' done -  took ' + str(current_time - self.last) + ' seconds')
+        print(f"\t{action} done -  took {str(current_time - self.last)} seconds")
         self.last = current_time
 
     def record_total_performance(self):
