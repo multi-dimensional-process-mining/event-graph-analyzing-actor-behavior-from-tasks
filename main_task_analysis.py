@@ -21,19 +21,19 @@ ac = AnalysisConfigurator(pattern_subset_description)
 
 # --------------------------- CONSTRUCTION ----------------------------- #
 # IF STARTING FROM SCRATCH (without event graph constructed in neo4j)
-# (1) set "step_preprocess" and "step_create_event_graph" to true:
-step_preprocess = False
-step_construct_event_graph = False
-# (2) create graph in Neo4j (with same password as specified in "graph_confs.py")
+# (1) create graph in Neo4j (with same password as specified in "graph_confs.py")
 #     and allocate enough memory: set dbms.memory.heap.max_size=20G
-# (3) specify path to import directory of neo4j database:
+# (2) specify path to import directory of neo4j database:
 path_to_neo4j_import_directory = 'C:\\Users\\s111402\\.Neo4jDesktop\\relate-data\dbmss\\' \
                                  'dbms-95e392fb-324f-40c5-a2ec-c7cdfd0eb78e\\import\\'
+# (3) set "step_preprocess" and "step_create_event_graph" to true:
+step_preprocess = False
+step_construct_event_graph = False
 
-# IF STARTING FROM SCRATCH OR FROM AN EVENT GRAPH PRECONSTRUCTED:
+# IF EVENT GRAPH IS ALREADY CONSTRUCTED:
 # set "step_construct_high_level_events" to true to construct high level events:
 step_construct_high_level_events = False
-
+# and set "step_construct_clusters" to true to perform clustering and construct clusters:
 step_construct_clusters = False
 
 # --------------- PROCESS VISUALIZATION using TASK DFGs ---------------- #
