@@ -34,7 +34,7 @@ step_construct_event_graph = False
 # set "step_construct_high_level_events" to true to construct high level events:
 step_construct_high_level_events = False
 # and set "step_construct_clusters" to true to perform clustering and construct clusters:
-step_construct_clusters = False
+step_construct_clusters = True
 
 # --------------- PROCESS VISUALIZATION using TASK DFGs ---------------- #
 # IF EVENT GRAPH, HIGH LEVEL EVENTS AND CLUSTER CONSTRUCTS ARE IN PLACE:
@@ -51,7 +51,7 @@ start_end_date = ['2016-01-01', '2016-06-30']
 step_create_DFG_concept_drift_comparison = False
 start_end_dates = [['2016-01-01', '2016-06-30'], ['2016-08-01', '2017-02-01']]
 
-step_create_inter_task_DFG_resource_specific = True
+step_create_inter_task_DFG_resource_specific = False
 # resources = None
 resources = ["User_29", "User_113"]
 resources_lists_over = [["User_29"], ["User_113"]]
