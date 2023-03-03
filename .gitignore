@@ -4,7 +4,15 @@
 /constructors/__pycache__/
 /pattern_encoders/__pycache__/
 /preprocessors/__pycache__/
-meta-output/patterns/patterns_bpic2017_case_attr_freq_geq_10_20.pkl
-performance/constructing_event_graph_bpic2017_case_attr.csv
-performance/constructing_task_instance_nodes_bpic2017_case_attr.csv
 
+/raw_data/
+!/raw_data/.gitkeep
+
+/performance/
+!/performance/.gitkeep
+
+/output/
+!/output/.gitkeep
+
+/meta_output/
+!/meta_output/.gitkeep
