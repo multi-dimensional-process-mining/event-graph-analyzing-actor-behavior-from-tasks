@@ -1,2 +1,6 @@
 **/__pycache__/
-.idea/
+/.idea/
+/__pycache__/
+/constructors/__pycache__/
+/pattern_encoders/__pycache__/
+/preprocessors/__pycache__/
