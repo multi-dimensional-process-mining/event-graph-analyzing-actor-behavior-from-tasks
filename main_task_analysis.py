@@ -27,12 +27,12 @@ ac = AnalysisConfigurator(pattern_subset_description)
 path_to_neo4j_import_directory = 'C:\\Users\\s111402\\.Neo4jDesktop\\relate-data\dbmss\\' \
                                  'dbms-95e392fb-324f-40c5-a2ec-c7cdfd0eb78e\\import\\'
 # (3) set "step_preprocess" and "step_create_event_graph" to true:
-step_preprocess = False
-step_construct_event_graph = False
+step_preprocess = True
+step_construct_event_graph = True
 
 # IF EVENT GRAPH IS ALREADY CONSTRUCTED:
 # set "step_construct_high_level_events" to true to construct high level events:
-step_construct_high_level_events = False
+step_construct_high_level_events = True
 # and set "step_construct_clusters" to true to perform clustering and construct clusters:
 step_construct_clusters = True
 

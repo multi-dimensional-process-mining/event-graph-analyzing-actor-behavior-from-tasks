@@ -38,33 +38,39 @@ class EventGraphConstructor:
         pr.record_performance("import_event_nodes")
 
         # query_filter_events = f'MATCH (e:Event) WHERE e.lifecycle in ["SUSPEND","RESUME", "ATE_ABORT", "SCHEDULE", "WITHDRAW"] DELETE e'
-        query_filter_events = f'MATCH (e:Event) WHERE e.lifecycle in ["SUSPEND","RESUME"] DELETE e'
+        query_filter_events = f'CALL {{MATCH (e:Event) WHERE e.lifecycle in ["SUSPEND","RESUME"] DELETE e}} IN TRANSACTIONS OF 1000 ROWS'
         run_query(self.driver, query_filter_events)
         pr.record_performance(f"filter_events_SUSPEND_RESUME")
 
         for entity in self.data_entities:
             query_create_entity_nodes = f'''
-                MATCH (e:Event) 
-                WITH DISTINCT e.{entity} AS id
-                CREATE (n:Entity {{ID:id, EntityType:"{entity}"}})'''
+                CALL {{
+                    MATCH (e:Event) 
+                    WITH DISTINCT e.{entity} AS id
+                    CREATE (n:Entity {{ID:id, EntityType:"{entity}"}})
+                }} IN TRANSACTIONS OF 1000 ROWS'''
             run_query(self.driver, query_create_entity_nodes)
             pr.record_performance(f"create_entity_nodes_({entity})")
 
             query_correlate_events_to_entity = f'''
-                MATCH (e:Event) WHERE e.{entity} IS NOT NULL
-                MATCH (n:Entity {{EntityType: "{entity}"}}) WHERE e.{entity} = n.ID
-                CREATE (e)-[:CORR]->(n)'''
+                CALL {{
+                    MATCH (e:Event) WHERE e.{entity} IS NOT NULL
+                    MATCH (n:Entity {{EntityType: "{entity}"}}) WHERE e.{entity} = n.ID
+                    CREATE (e)-[:CORR]->(n)
+                }} IN TRANSACTIONS OF 1000 ROWS'''
             run_query(self.driver, query_correlate_events_to_entity)
             pr.record_performance(f"correlate_events_to_{entity}s")
 
             query_create_directly_follows = f'''
-                MATCH (n:Entity) WHERE n.EntityType="{entity}"
-                MATCH (n)<-[:CORR]-(e)
-                WITH n, e AS nodes ORDER BY e.timestamp, ID(e)
-                WITH n, collect(nodes) AS event_node_list
-                UNWIND range(0, size(event_node_list)-2) AS i
-                WITH n, event_node_list[i] AS e1, event_node_list[i+1] AS e2
-                MERGE (e1)-[df:DF {{EntityType:n.EntityType}}]->(e2)'''
+                CALL {{
+                    MATCH (n:Entity) WHERE n.EntityType="{entity}"
+                    MATCH (n)<-[:CORR]-(e)
+                    WITH n, e AS nodes ORDER BY e.timestamp, ID(e)
+                    WITH n, collect(nodes) AS event_node_list
+                    UNWIND range(0, size(event_node_list)-2) AS i
+                    WITH n, event_node_list[i] AS e1, event_node_list[i+1] AS e2
+                    MERGE (e1)-[df:DF {{EntityType:n.EntityType}}]->(e2)
+                }} IN TRANSACTIONS OF 1000 ROWS'''
             run_query(self.driver, query_create_directly_follows)
             pr.record_performance(f"create_directly_follows_({entity})")
         pr.record_total_performance()
