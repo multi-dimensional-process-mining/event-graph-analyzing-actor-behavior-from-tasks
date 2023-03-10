@@ -19,10 +19,11 @@ class HighLevelEventConstructor:
         pr = PerformanceRecorder(self.name_data_set, 'constructing_task_instance_nodes')
         # combine resource and case directly follows relationships
         query_combine_df_joint = f'''
+            MATCH (e1:Event)-[:DF {{EntityType:'{self.entity_labels[0][0]}'}}]->(e2:Event)
+            WHERE (e1)-[:DF {{EntityType:'{self.entity_labels[1][0]}'}}]->(e2)
             CALL {{
-                MATCH (e1:Event)-[:DF {{EntityType:'{self.entity_labels[0][0]}'}}]->(e2:Event)
-                WHERE (e1)-[:DF {{EntityType:'{self.entity_labels[1][0]}'}}]->(e2)
-                CREATE (e1)-[:DF_JOINT]->(e2)
+                WITH e1,e2
+                MERGE (e1)-[:DF_JOINT]->(e2)
             }} IN TRANSACTIONS OF 1000 ROWS'''
         run_query(self.driver, query_combine_df_joint)
         pr.record_performance('combine_df_joint')
@@ -30,8 +31,9 @@ class HighLevelEventConstructor:
         # check if the transactional lifecycle is recorded and combine with activity classifier into single property
         if len(self.action_lifecycle_label) == 2:
             query_set_activity_lifecycle_property = f'''
+                MATCH (e:Event)
                 CALL {{
-                    MATCH (e:Event)
+                    WITH e
                     SET e.activity_lifecycle = e.{self.action_lifecycle_label[0]}+'+'+e.{self.action_lifecycle_label[1]}
                 }} IN TRANSACTIONS OF 1000 ROWS'''
             run_query(self.driver, query_set_activity_lifecycle_property)
@@ -41,19 +43,20 @@ class HighLevelEventConstructor:
         # query and materialize task instances and relationships with events
         query_create_ti_nodes = f'''
             CALL {{
-                CALL {{
-                    MATCH (e1:Event)-[:DF_JOINT]->() WHERE NOT ()-[:DF_JOINT]->(e1)
-                    MATCH ()-[:DF_JOINT]->(e2:Event) WHERE NOT (e2)-[:DF_JOINT]->()
-                    MATCH p=(e1)-[:DF_JOINT*]->(e2)
-                    RETURN p, e1, e2
-                    UNION
-                    MATCH (e:Event) WHERE e.{self.entity_labels[0][1]} IS NOT NULL
-                    AND NOT ()-[:DF_JOINT]->(e) AND NOT (e)-[:DF_JOINT]->()
-                    MATCH p=(e) RETURN p, e AS e1, e AS e2
-                }}
-                WITH [event in nodes(p) | event.{self.action_lifecycle_label[0]}] AS path, 
-                    e1.{self.entity_labels[0][1]} AS resource, e1.{self.entity_labels[1][1]} AS case_id, 
-                    nodes(p) AS events, e1.timestamp AS start_time, e2.timestamp AS end_time
+                MATCH (e1:Event)-[:DF_JOINT]->() WHERE NOT ()-[:DF_JOINT]->(e1)
+                MATCH ()-[:DF_JOINT]->(e2:Event) WHERE NOT (e2)-[:DF_JOINT]->()
+                MATCH p=(e1)-[:DF_JOINT*]->(e2)
+                RETURN p, e1, e2
+                UNION
+                MATCH (e:Event) WHERE e.{self.entity_labels[0][1]} IS NOT NULL
+                AND NOT ()-[:DF_JOINT]->(e) AND NOT (e)-[:DF_JOINT]->()
+                MATCH p=(e) RETURN p, e AS e1, e AS e2
+            }}
+            WITH [event in nodes(p) | event.{self.action_lifecycle_label[0]}] AS path, 
+                e1.{self.entity_labels[0][1]} AS resource, e1.{self.entity_labels[1][1]} AS case_id, 
+                nodes(p) AS events, e1.timestamp AS start_time, e2.timestamp AS end_time
+            CALL {{
+                WITH path, resource, case_id, events, start_time, end_time
                 CREATE (ti:TaskInstance {{path:path, rID:resource, cID:case_id, start_time:start_time,
                     end_time:end_time, r_count: 1, c_count: 1}})
                 WITH ti, events
@@ -81,9 +84,10 @@ class HighLevelEventConstructor:
         for entity in self.entity_labels:
             # correlate task instances to entities
             query_correlate_ti_to_entity = f'''
+                MATCH (ti:TaskInstance)
+                MATCH (n:Entity {{EntityType:"{entity[0]}"}}) WHERE ti.{entity[2]} = n.ID
                 CALL {{
-                    MATCH (ti:TaskInstance)
-                    MATCH (n:Entity {{EntityType:"{entity[0]}"}}) WHERE ti.{entity[2]} = n.ID
+                    WITH ti,n
                     CREATE (ti)-[:CORR]->(n)
                 }} IN TRANSACTIONS OF 1000 ROWS'''
             run_query(self.driver, query_correlate_ti_to_entity)
@@ -91,13 +95,14 @@ class HighLevelEventConstructor:
 
             # create DF-relationships between task instances
             query_create_df_ti = f'''
+                MATCH (n:Entity) WHERE n.EntityType="{entity[0]}"
+                MATCH (ti:TaskInstance)-[:CORR]->(n)
+                WITH n, ti AS nodes ORDER BY ti.start_time, ID(ti)
+                WITH n, COLLECT (nodes) as nodeList
+                UNWIND range(0, size(nodeList)-2) AS i
+                WITH n, nodeList[i] as ti_first, nodeList[i+1] as ti_second
                 CALL {{
-                    MATCH (n:Entity) WHERE n.EntityType="{entity[0]}"
-                    MATCH (ti:TaskInstance)-[:CORR]->(n)
-                    WITH n, ti AS nodes ORDER BY ti.start_time, ID(ti)
-                    WITH n, COLLECT (nodes) as nodeList
-                    UNWIND range(0, size(nodeList)-2) AS i
-                    WITH n, nodeList[i] as ti_first, nodeList[i+1] as ti_second
+                    WITH n,ti_first,ti_second
                     MERGE (ti_first)-[df:DF_TI {{EntityType:n.EntityType}}]->(ti_second)
                 }} IN TRANSACTIONS OF 1000 ROWS'''
             run_query(self.driver, query_create_df_ti)
@@ -108,6 +113,7 @@ class HighLevelEventConstructor:
 
 
 def run_query(driver, query):
+    print(query)
     with driver.session() as session:
         result = session.run(query).single()
         if result:
