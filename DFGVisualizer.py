@@ -743,7 +743,7 @@ def query_inter_cluster_DFG_nodes_min_max(tx, cluster):
 def query_inter_cluster_DFG_edges_min_max(tx, cluster, grey_threshold):
     q = f'''
             MATCH (tc:TaskCluster {{Name: {cluster}}})<-[:OBSERVED]-(ti:TaskInstance)
-            MATCH (ti)-[:CONTAINS]->(e1:Event)-[df:DF {{EntityType: "joint"}}]->(e2:Event)
+            MATCH (ti)-[:CONTAINS]->(e1:Event)-[df:DF_JOINT]->(e2:Event)
             WITH DISTINCT e1.activity_lifecycle AS e1_action, e2.activity_lifecycle AS e2_action, count(df) AS freq
             RETURN MAX(freq)
             '''
@@ -755,7 +755,7 @@ def query_inter_cluster_DFG_edges_min_max(tx, cluster, grey_threshold):
 
     q = f'''
         MATCH (tc:TaskCluster {{Name: {cluster}}})<-[:OBSERVED]-(ti:TaskInstance)
-        MATCH (ti)-[:CONTAINS]->(e1:Event)-[df:DF {{EntityType: "joint"}}]->(e2:Event)
+        MATCH (ti)-[:CONTAINS]->(e1:Event)-[df:DF_JOINT]->(e2:Event)
         WITH DISTINCT e1.activity_lifecycle AS e1_action, e2.activity_lifecycle AS e2_action, count(df) AS freq
         RETURN e1_action, e2_action, freq ORDER BY freq ASC
         '''
@@ -766,14 +766,14 @@ def query_inter_cluster_DFG_edges_min_max(tx, cluster, grey_threshold):
 def query_inter_cluster_DFG_start_and_end(tx, cluster):
     q = f'''
             MATCH (tc:TaskCluster {{Name: {cluster}}})<-[:OBSERVED]-(ti:TaskInstance)
-            MATCH (ti)-[:CONTAINS]->(e:Event) WHERE NOT (:Event)-[:DF {{EntityType: "joint"}}]->(e)
+            MATCH (ti)-[:CONTAINS]->(e:Event) WHERE NOT (:Event)-[:DF_JOINT]->(e)
             WITH DISTINCT e.activity_lifecycle AS start, count(e) AS freq
             RETURN start, freq
             '''
     start_node_results = list(tx.run(q))
     q = f'''
             MATCH (tc:TaskCluster {{Name: {cluster}}})<-[:OBSERVED]-(ti:TaskInstance)
-            MATCH (ti)-[:CONTAINS]->(e:Event) WHERE NOT (e)-[:DF {{EntityType: "joint"}}]->(:Event)
+            MATCH (ti)-[:CONTAINS]->(e:Event) WHERE NOT (e)-[:DF_JOINT]->(:Event)
             WITH DISTINCT e.activity_lifecycle AS end, count(e) AS freq
             RETURN end, freq
             '''
