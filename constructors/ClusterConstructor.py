@@ -21,27 +21,30 @@ class ClusterConstructor:
             # write cluster as property to task instance nodes
             if not pd.isna(row['cluster']):
                 query_write_clusters_to_task_instances = f'''
-                                CALL {{
-                                    MATCH (ti:TaskInstance) WHERE ti.path = {row['path']}
-                                    SET ti.cluster = {row['cluster']}
-                                }} IN TRANSACTIONS OF 1000 ROWS'''
+                    MATCH (ti:TaskInstance) WHERE ti.path = {row['path']}
+                    CALL {{
+                        WITH ti
+                        SET ti.cluster = {row['cluster']}
+                    }} IN TRANSACTIONS OF 100 ROWS'''
                 run_query(self.driver, query_write_clusters_to_task_instances)
         pr.record_performance("write_clusters_to_task_instances")
 
         # create cluster nodes
         query_create_cluster_nodes = f'''
+            MATCH (ti:TaskInstance) WHERE ti.cluster IS NOT NULL 
+            WITH DISTINCT ti.cluster AS cluster, count(*) AS cluster_count
             CALL {{
-                MATCH (ti:TaskInstance) WHERE ti.cluster IS NOT NULL 
-                WITH DISTINCT ti.cluster AS cluster, count(*) AS cluster_count
+                WITH cluster, cluster_count
                 MERGE (tc:TaskCluster {{Name:cluster, count:cluster_count}})
             }} IN TRANSACTIONS OF 1000 ROWS'''
         run_query(self.driver, query_create_cluster_nodes)
         pr.record_performance("create_cluster_nodes")
         # link task instance nodes to corresponding cluster nodes
         query_link_task_instances_to_clusters = f'''
+            MATCH (tc:TaskCluster)
+            MATCH (ti:TaskInstance) WHERE ti.cluster = tc.Name
             CALL {{
-                MATCH (tc:TaskCluster)
-                MATCH (ti:TaskInstance) WHERE ti.cluster = tc.Name
+                WITH tc, ti
                 CREATE (ti)-[:OBSERVED]->(tc)
             }} IN TRANSACTIONS OF 1000 ROWS'''
         run_query(self.driver, query_link_task_instances_to_clusters)
@@ -112,16 +115,18 @@ class ClusterConstructor:
     def remove_cluster_constructs(self):
         # remove cluster nodes and all attached relationships
         query_remove_cluster_nodes = f'''
+            MATCH (tc:TaskCluster) 
             CALL {{
-                MATCH (tc:TaskCluster) 
+                WITH tc
                 DETACH DELETE tc
             }} IN TRANSACTIONS OF 1000 ROWS'''
         run_query(self.driver, query_remove_cluster_nodes)
 
         # remove cluster property from ti nodes
         query_remove_cluster_property = f'''
+            MATCH (ti:TaskInstance) 
             CALL {{
-                MATCH (ti:TaskInstance) 
+                WITH ti
                 REMOVE ti.cluster
             }} IN TRANSACTIONS OF 1000 ROWS'''
         run_query(self.driver, query_remove_cluster_property)

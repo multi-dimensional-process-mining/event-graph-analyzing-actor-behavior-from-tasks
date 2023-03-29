@@ -5,6 +5,7 @@ from constructors.EventGraphConstructor import EventGraphConstructor
 from constructors.HighLevelEventConstructor import HighLevelEventConstructor
 from constructors.ClusterConstructor import ClusterConstructor
 from TaskClusterModule import TaskClusterModule
+from VariantVisualizer import VariantVisualizer
 from DFGVisualizer import DFGVisualizer
 
 # --------------------------- BEGIN CONFIG ----------------------------- #
@@ -27,17 +28,26 @@ ac = AnalysisConfigurator(pattern_subset_description)
 path_to_neo4j_import_directory = 'C:\\Users\\s111402\\.Neo4jDesktop\\relate-data\dbmss\\' \
                                  'dbms-95e392fb-324f-40c5-a2ec-c7cdfd0eb78e\\import\\'
 # (3) set "step_preprocess" and "step_create_event_graph" to true:
-step_preprocess = True
-step_construct_event_graph = True
+step_preprocess = False
+step_construct_event_graph = False
 
 # IF EVENT GRAPH IS ALREADY CONSTRUCTED:
-# set "step_construct_high_level_events" to true to construct high level events:
-step_construct_high_level_events = True
+# (4) set "step_construct_high_level_events" to true to construct high level events:
 # and set "step_construct_clusters" to true to perform clustering and construct clusters:
-step_construct_clusters = True
+step_construct_high_level_events = False
+step_construct_clusters = False
+
+# IF EVENT GRAPH, HIGH LEVEL EVENTS AND CLUSTER CONSTRUCTS ARE IN PLACE,
+# THE FOLLOWING STEPS CAN BE EXECUTED (I.E. SET TO TRUE)
+
+# --------------- VISUALIZATION of TASK CLUSTER VARIANTS --------------- #
+# the first step adds to each task instance node an identifier for its variant, i.e., each task instance with the same path/action sequence has the same variant ID
+#   this value is based on the frequency of te variant (i.e., if a task instance has variant ID=1, its variant/action sequence is the most frequent occurring in the data)
+# this is used for the next step to better identify the visualized variants
+step_add_task_instance_ids = True
+step_visualize_task_variants_colored = True
 
 # --------------- PROCESS VISUALIZATION using TASK DFGs ---------------- #
-# IF EVENT GRAPH, HIGH LEVEL EVENTS AND CLUSTER CONSTRUCTS ARE IN PLACE:
 step_create_intra_task_DFG = False
 
 step_create_inter_task_DFG = False
@@ -81,7 +91,15 @@ if step_construct_clusters:
     cc.remove_cluster_constructs()
     cc.construct_clusters(tcm.get_patterns_clustered())
 
-# [2] PROCESS VISUALIZATION using TASK DFGs
+# [2] VISUALIZATION of TASK CLUSTER VARIANTS
+if step_add_task_instance_ids:
+    HighLevelEventConstructor(gc.get_password(), graph, gc.get_entity_labels(), gc.get_action_lifecycle_labels()) \
+        .set_task_instance_ids()
+if step_visualize_task_variants_colored:
+    vv = VariantVisualizer(graph=graph, analysis_directory=ac.get_analysis_directory())
+    vv.visualize_variants_colored()
+
+# [3] PROCESS VISUALIZATION using TASK DFGs
 dfg_vis = DFGVisualizer(graph, gc.get_password(), gc.get_name_data_set(), gc.get_entity_labels(),
                         gc.get_action_lifecycle_labels(), ac.get_analysis_directory(), ac.get_exclude_clusters())
 if step_create_inter_task_DFG:

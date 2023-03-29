@@ -66,21 +66,6 @@ class HighLevelEventConstructor:
         run_query(self.driver, query_create_ti_nodes)
         pr.record_performance('create_ti_nodes')
 
-        # # set task instance ids
-        # query_set_ti_ids = f'''
-        #     CALL {{
-        #         MATCH (ti:TaskInstance)
-        #         WITH DISTINCT ti.path AS path, count(*) AS count
-        #         ORDER BY count DESC
-        #         WITH collect(path) as paths, collect(count) as counts
-        #         UNWIND range(0, size(paths)-1) as pos
-        #         WITH paths[pos] AS path, pos+1 AS rank
-        #         MATCH (ti:TaskInstance) WHERE ti.path = path
-        #         SET ti.ID = rank
-        #     }} IN TRANSACTIONS OF 1000 ROWS'''
-        # run_query(self.driver, query_set_ti_ids)
-        # pr.record_performance('set_task_instance_id')
-
         for entity in self.entity_labels:
             # correlate task instances to entities
             query_correlate_ti_to_entity = f'''
@@ -110,6 +95,25 @@ class HighLevelEventConstructor:
 
         pr.record_total_performance()
         pr.save_to_file()
+
+    def set_task_instance_ids(self):
+        # create performance recorder
+        pr = PerformanceRecorder(self.name_data_set, 'setting_task_instance_ids')
+        # set task instance ids
+        query_set_ti_ids = f'''
+            MATCH (ti:TaskInstance)
+            WITH DISTINCT ti.path AS path, count(*) AS count
+            ORDER BY count DESC
+            WITH collect(path) as paths
+            UNWIND range(0, size(paths)-1) as pos
+            WITH paths[pos] AS path, pos+1 AS rank
+            MATCH (ti:TaskInstance) WHERE ti.path = path
+            CALL {{
+                WITH ti, rank
+                SET ti.ID = rank
+            }} IN TRANSACTIONS OF 500 ROWS'''
+        run_query(self.driver, query_set_ti_ids)
+        pr.record_performance('set_task_instance_id')
 
 
 def run_query(driver, query):
