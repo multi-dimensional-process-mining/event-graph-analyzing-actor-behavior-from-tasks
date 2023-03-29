@@ -154,18 +154,31 @@ class HighLevelEventConstructor:
         # create performance recorder
         pr = PerformanceRecorder(self.name_data_set, 'setting_task_instance_ids')
         # set task instance ids
+        # query_set_ti_ids = f'''
+        #     MATCH (ti:TaskInstance)
+        #     WITH DISTINCT ti.path AS path, count(*) AS count
+        #     ORDER BY count DESC
+        #     WITH collect(path) as paths
+        #     UNWIND range(0, size(paths)-1) as pos
+        #     WITH paths[pos] AS path, pos+1 AS rank
+        #     MATCH (ti:TaskInstance) WHERE ti.path = path
+        #     CALL {{
+        #         WITH ti, rank
+        #         SET ti.ID = rank
+        #     }} IN TRANSACTIONS OF 500 ROWS'''
         query_set_ti_ids = f'''
-            MATCH (ti:TaskInstance)
-            WITH DISTINCT ti.path AS path, count(*) AS count
-            ORDER BY count DESC
-            WITH collect(path) as paths
-            UNWIND range(0, size(paths)-1) as pos
-            WITH paths[pos] AS path, pos+1 AS rank
-            MATCH (ti:TaskInstance) WHERE ti.path = path
-            CALL {{
-                WITH ti, rank
-                SET ti.ID = rank
-            }} IN TRANSACTIONS OF 500 ROWS'''
+            CALL apoc.periodic.iterate(
+            "MATCH (ti:TaskInstance)
+             WITH DISTINCT ti.path AS path, count(*) AS count
+             ORDER BY count DESC
+             WITH collect(path) as paths
+             UNWIND range(0, size(paths)-1) as pos
+             WITH paths[pos] AS path, pos+1 AS rank
+             MATCH (ti:TaskInstance) WHERE ti.path = path
+             RETURN ti, rank",
+            "WITH ti, rank
+             SET ti.ID = rank",
+            {{batchSize:100}})'''
         run_query(self.driver, query_set_ti_ids)
         pr.record_performance('set_task_instance_id')
 

@@ -20,33 +20,56 @@ class ClusterConstructor:
         for index, row in df_patterns_clustered.iterrows():
             # write cluster as property to task instance nodes
             if not pd.isna(row['cluster']):
+                # query_write_clusters_to_task_instances = f'''
+                #     MATCH (ti:TaskInstance) WHERE ti.path = {row['path']}
+                #     CALL {{
+                #         WITH ti
+                #         SET ti.cluster = {row['cluster']}
+                #     }} IN TRANSACTIONS OF 100 ROWS'''
                 query_write_clusters_to_task_instances = f'''
-                    MATCH (ti:TaskInstance) WHERE ti.path = {row['path']}
-                    CALL {{
-                        WITH ti
-                        SET ti.cluster = {row['cluster']}
-                    }} IN TRANSACTIONS OF 100 ROWS'''
+                    CALL apoc.periodic.iterate(
+                    "MATCH (ti:TaskInstance) WHERE ti.path = {row['path']}
+                     RETURN ti",
+                    "WITH ti
+                     SET ti.cluster = {row['cluster']}",
+                    {{batchSize:100}})'''
                 run_query(self.driver, query_write_clusters_to_task_instances)
         pr.record_performance("write_clusters_to_task_instances")
 
         # create cluster nodes
+        # query_create_cluster_nodes = f'''
+        #     MATCH (ti:TaskInstance) WHERE ti.cluster IS NOT NULL
+        #     WITH DISTINCT ti.cluster AS cluster, count(*) AS cluster_count
+        #     CALL {{
+        #         WITH cluster, cluster_count
+        #         MERGE (tc:TaskCluster {{Name:cluster, count:cluster_count}})
+        #     }} IN TRANSACTIONS OF 1000 ROWS'''
         query_create_cluster_nodes = f'''
-            MATCH (ti:TaskInstance) WHERE ti.cluster IS NOT NULL 
-            WITH DISTINCT ti.cluster AS cluster, count(*) AS cluster_count
-            CALL {{
-                WITH cluster, cluster_count
-                MERGE (tc:TaskCluster {{Name:cluster, count:cluster_count}})
-            }} IN TRANSACTIONS OF 1000 ROWS'''
+            CALL apoc.periodic.iterate(
+            "MATCH (ti:TaskInstance) WHERE ti.cluster IS NOT NULL 
+             RETURN DISTINCT ti.cluster AS cluster, count(*) AS cluster_count",
+            "WITH cluster, cluster_count
+             MERGE (tc:TaskCluster {{Name:cluster, count:cluster_count}})",
+            {{batchSize:100}})'''
         run_query(self.driver, query_create_cluster_nodes)
         pr.record_performance("create_cluster_nodes")
+
         # link task instance nodes to corresponding cluster nodes
+        # query_link_task_instances_to_clusters = f'''
+        #    MATCH (tc:TaskCluster)
+        #    MATCH (ti:TaskInstance) WHERE ti.cluster = tc.Name
+        #    CALL {{
+        #        WITH tc, ti
+        #        CREATE (ti)-[:OBSERVED]->(tc)
+        #    }} IN TRANSACTIONS OF 1000 ROWS'''
         query_link_task_instances_to_clusters = f'''
-            MATCH (tc:TaskCluster)
-            MATCH (ti:TaskInstance) WHERE ti.cluster = tc.Name
-            CALL {{
-                WITH tc, ti
-                CREATE (ti)-[:OBSERVED]->(tc)
-            }} IN TRANSACTIONS OF 1000 ROWS'''
+            CALL apoc.periodic.iterate(
+            "MATCH (tc:TaskCluster)
+             MATCH (ti:TaskInstance) WHERE ti.cluster = tc.Name
+             RETURN tc, ti",
+            "WITH tc, ti
+             CREATE (ti)-[:OBSERVED]->(tc)",
+            {{batchSize:100}})'''
         run_query(self.driver, query_link_task_instances_to_clusters)
         pr.record_performance("link_task_instances_to_clusters")
 
@@ -114,21 +137,35 @@ class ClusterConstructor:
 
     def remove_cluster_constructs(self):
         # remove cluster nodes and all attached relationships
+        # query_remove_cluster_nodes = f'''
+        #     MATCH (tc:TaskCluster)
+        #     CALL {{
+        #         WITH tc
+        #         DETACH DELETE tc
+        #     }} IN TRANSACTIONS OF 1000 ROWS'''
         query_remove_cluster_nodes = f'''
-            MATCH (tc:TaskCluster) 
-            CALL {{
-                WITH tc
-                DETACH DELETE tc
-            }} IN TRANSACTIONS OF 1000 ROWS'''
+            CALL apoc.periodic.iterate(
+            "MATCH (tc:TaskCluster)
+             RETURN tc", 
+            "WITH tc
+             DETACH DELETE tc",
+            {{batchSize:100}})'''
         run_query(self.driver, query_remove_cluster_nodes)
 
         # remove cluster property from ti nodes
+        # query_remove_cluster_property = f'''
+        #     MATCH (ti:TaskInstance)
+        #     CALL {{
+        #         WITH ti
+        #         REMOVE ti.cluster
+        #     }} IN TRANSACTIONS OF 1000 ROWS'''
         query_remove_cluster_property = f'''
-            MATCH (ti:TaskInstance) 
-            CALL {{
-                WITH ti
-                REMOVE ti.cluster
-            }} IN TRANSACTIONS OF 1000 ROWS'''
+            CALL apoc.periodic.iterate(
+            "MATCH (ti:TaskInstance)
+             RETURN ti", 
+            "WITH ti
+             REMOVE ti.cluster",
+            {{batchSize:100}})'''
         run_query(self.driver, query_remove_cluster_property)
 
 

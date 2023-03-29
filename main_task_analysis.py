@@ -24,27 +24,28 @@ ac = AnalysisConfigurator(pattern_subset_description)
 # IF STARTING FROM SCRATCH (without event graph constructed in neo4j)
 # (1) create graph in Neo4j (with same password as specified in "graph_confs.py")
 #     and allocate enough memory: set dbms.memory.heap.max_size=20G
-# (2) specify path to import directory of neo4j database:
+# (2) install APOC plugin
+# (3) specify path to import directory of neo4j database:
 path_to_neo4j_import_directory = 'C:\\Users\\s111402\\.Neo4jDesktop\\relate-data\dbmss\\' \
                                  'dbms-95e392fb-324f-40c5-a2ec-c7cdfd0eb78e\\import\\'
-# (3) set "step_preprocess" and "step_create_event_graph" to true:
+# (4) set "step_preprocess" and "step_create_event_graph" to true:
 step_preprocess = False
 step_construct_event_graph = False
 
 # IF EVENT GRAPH IS ALREADY CONSTRUCTED:
-# (4) set "step_construct_high_level_events" to true to construct high level events:
+# (5) set "step_construct_high_level_events" to true to construct high level events:
 # and set "step_construct_clusters" to true to perform clustering and construct clusters:
 step_construct_high_level_events = False
 step_construct_clusters = False
 
 # IF EVENT GRAPH, HIGH LEVEL EVENTS AND CLUSTER CONSTRUCTS ARE IN PLACE,
-# THE FOLLOWING STEPS CAN BE EXECUTED (I.E. SET TO TRUE)
+# THE FOLLOWING STEPS CAN BE EXECUTED
 
 # --------------- VISUALIZATION of TASK CLUSTER VARIANTS --------------- #
 # the first step adds to each task instance node an identifier for its variant, i.e., each task instance with the same path/action sequence has the same variant ID
 #   this value is based on the frequency of te variant (i.e., if a task instance has variant ID=1, its variant/action sequence is the most frequent occurring in the data)
 # this is used for the next step to better identify the visualized variants
-step_add_task_instance_ids = True
+step_add_task_instance_ids = False
 step_visualize_task_variants_colored = True
 
 # --------------- PROCESS VISUALIZATION using TASK DFGs ---------------- #
