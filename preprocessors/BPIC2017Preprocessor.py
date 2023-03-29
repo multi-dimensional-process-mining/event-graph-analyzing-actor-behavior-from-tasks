@@ -10,6 +10,7 @@ class BPIC2017Preprocessor(GeneralPreprocessor.GeneralPreprocessor):
                          path_to_neo4j_import_directory, use_sample, sample_cases)
 
     def preprocess(self):
+        print("Reading "+f'raw_data/{self.filename}.csv')
         self.csv_data_set = pd.read_csv(f'raw_data/{self.filename}.csv', keep_default_na=True,
                                         usecols=self.column_names, sep=self.separator)
         self.csv_data_set.drop_duplicates(keep='first', inplace=True)
@@ -28,5 +29,6 @@ class BPIC2017Preprocessor(GeneralPreprocessor.GeneralPreprocessor):
         self.csv_data_set['timestamp'] = self.csv_data_set['timestamp'].map(
             lambda x: x.strftime('%Y-%m-%dT%H:%M:%S.%f')[0:-3] + '+0100')
 
+        print("Writing pre-processed file "+f'{self.path_to_neo4j_import_directory}{self.name_data_set}.csv')
         self.csv_data_set.to_csv(f'{self.path_to_neo4j_import_directory}{self.name_data_set}.csv', index=True,
                                  index_label="idx")
